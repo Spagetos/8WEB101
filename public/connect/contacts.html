@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Connect — Contacts</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+<div class="app">
+
+    <aside class="sidebar" id="sidebar" data-active="contacts"></aside>
+
+
+    <main class="main-content">
+
+        <header class="topbar">
+
+            <div>
+                <h1>Contacts</h1>
+                <p id="contactsSubtitle">Retrouvez tous les membres de Connect.</p>
+            </div>
+
+            <button class="primary-button" id="inviteButton">
+                <span>+</span>
+                Inviter quelqu'un
+            </button>
+
+        </header>
+
+
+        <section class="contacts-page">
+
+            <div class="contacts-toolbar">
+
+                <div class="search-box contacts-search">
+                    <span>⌕</span>
+                    <input type="text" id="contactSearch" placeholder="Rechercher un contact...">
+                </div>
+
+                <div class="contacts-filters">
+                    <button class="filter-button active" data-filter="all">Tous</button>
+                    <button class="filter-button" data-filter="online">En ligne</button>
+                    <button class="filter-button" data-filter="offline">Hors ligne</button>
+                </div>
+
+            </div>
+
+
+            <div class="contacts-grid" id="contactsGrid">
+                <p class="empty-state">Chargement…</p>
+            </div>
+
+        </section>
+
+    </main>
+
+</div>
+
+
+<script type="module">
+
+    import {
+        initApp, getProfiles, avatarHTML, fullName, esc,
+        isOnline, onPresenceChange, timeAgo, showToast
+    } from "./js/app.js";
+
+
+    const { user } = await initApp();
+
+    const grid = document.getElementById("contactsGrid");
+    const searchInput = document.getElementById("contactSearch");
+    const filterButtons = document.querySelectorAll(".filter-button");
+
+    const profiles = await getProfiles();
+    const others = [...profiles.values()]
+        .filter(p => p.id !== user.id)
+        .sort((a, b) => fullName(a).localeCompare(fullName(b), "fr"));
+
+    let activeFilter = "all";
+
+
+    function render() {
+
+        const search = searchInput.value.toLowerCase().trim();
+
+        const onlineCount = others.filter(p => isOnline(p.id)).length;
+
+        document.getElementById("contactsSubtitle").textContent =
+            `${others.length} membre${others.length > 1 ? "s" : ""} · ${onlineCount} en ligne`;
+
+        const visible = others.filter(p => {
+
+            const online = isOnline(p.id);
+
+            const matchesSearch =
+                fullName(p).toLowerCase().includes(search) ||
+                (p.email || "").toLowerCase().includes(search) ||
+                (p.role || "").toLowerCase().includes(search);
+
+            const matchesFilter =
+                activeFilter === "all" ||
+                (activeFilter === "online" && online) ||
+                (activeFilter === "offline" && !online);
+
+            return matchesSearch && matchesFilter;
+
+        });
+
+        if (!others.length) {
+            grid.innerHTML = `
+                <p class="empty-state grid-empty">
+                    Vous êtes seul pour l'instant. Utilisez « Inviter quelqu'un » pour partager le lien du site.
+                </p>`;
+            return;
+        }
+
+        if (!visible.length) {
+            grid.innerHTML = `<p class="empty-state grid-empty">Aucun contact ne correspond.</p>`;
+            return;
+        }
+
+        grid.innerHTML = visible.map(p => {
+
+            const online = isOnline(p.id);
+            const hasLocation = p.latitude != null && p.longitude != null;
+
+            return `
+                <article class="contact-card">
+
+                    <div class="contact-card-header">
+                        ${avatarHTML(p, { extraClass: "large-avatar", online })}
+                        ${hasLocation
+                            ? `<a href="map.html?contact=${p.id}" class="card-menu" title="Voir sur la carte">⌖</a>`
+                            : ""}
+                    </div>
+
+                    <div class="contact-card-body">
+
+                        <h3>${esc(fullName(p))}</h3>
+
+                        <span class="contact-role">${esc(p.role)}</span>
+
+                        <div class="contact-info">
+                            <span>✉</span>
+                            <a href="mailto:${esc(p.email)}">${esc(p.email)}</a>
+                        </div>
+
+                        <div class="contact-info">
+                            <span>⌖</span>
+                            ${hasLocation ? "Position partagée" : "Position non partagée"}
+                        </div>
+
+                    </div>
+
+                    <div class="contact-card-footer">
+
+                        <span class="status ${online ? "online" : "offline"}">
+                            <i></i>
+                            ${online ? "En ligne" : `Vu ${timeAgo(p.last_seen).toLowerCase()}`}
+                        </span>
+
+                        <a href="messages.html?contact=${p.id}" class="contact-message">
+                            Message
+                        </a>
+
+                    </div>
+
+                </article>
+            `;
+
+        }).join("");
+
+    }
+
+
+    searchInput.addEventListener("input", render);
+
+    filterButtons.forEach(button => {
+
+        button.addEventListener("click", () => {
+
+            filterButtons.forEach(item => item.classList.remove("active"));
+            button.classList.add("active");
+
+            activeFilter = button.dataset.filter;
+            render();
+
+        });
+
+    });
+
+
+    document.getElementById("inviteButton")
+        .addEventListener("click", async () => {
+
+            const link = new URL("login.html", location.href).href;
+
+            try {
+                await navigator.clipboard.writeText(link);
+                showToast("Lien d'inscription copié ! Envoyez-le à la personne à inviter.", "success");
+            } catch {
+                prompt("Copiez ce lien et envoyez-le :", link);
+            }
+
+        });
+
+
+    onPresenceChange(render);
+
+    render();
+
+</script>
+
+</body>
+</html>

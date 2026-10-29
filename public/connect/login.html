@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Connect — Connexion</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+<main class="auth-page">
+
+    <div class="auth-card">
+
+        <div class="auth-brand">
+            <div class="brand-icon">C</div>
+            <span>Connect</span>
+        </div>
+
+        <h1 id="authTitle">Bon retour 👋</h1>
+        <p class="auth-subtitle" id="authSubtitle">
+            Connectez-vous pour retrouver vos conversations.
+        </p>
+
+
+        <div class="auth-tabs">
+            <button type="button" class="auth-tab active" data-mode="login">Connexion</button>
+            <button type="button" class="auth-tab" data-mode="signup">Inscription</button>
+        </div>
+
+
+        <form id="authForm" class="auth-form" novalidate>
+
+            <div class="auth-row signup-only" hidden>
+
+                <div class="form-group">
+                    <label for="firstName">Prénom</label>
+                    <input id="firstName" type="text" autocomplete="given-name">
+                </div>
+
+                <div class="form-group">
+                    <label for="lastName">Nom</label>
+                    <input id="lastName" type="text" autocomplete="family-name">
+                </div>
+
+            </div>
+
+
+            <div class="form-group">
+                <label for="email">Adresse e-mail</label>
+                <input id="email" type="email" autocomplete="email" required>
+            </div>
+
+
+            <div class="form-group">
+                <label for="password">Mot de passe</label>
+                <input id="password" type="password" autocomplete="current-password" required minlength="6">
+            </div>
+
+
+            <p class="auth-message" id="authMessage" hidden></p>
+
+
+            <button type="submit" class="primary-button auth-submit" id="authSubmit">
+                Se connecter
+            </button>
+
+        </form>
+
+    </div>
+
+</main>
+
+
+<script type="module">
+
+    import { supabase } from "./js/supabase.js";
+
+
+    // Déjà connecté ? → accueil
+    const { data: { session } } = await supabase.auth.getSession();
+
+    if (session) location.replace("index.html");
+
+    document.body.classList.add("ready");
+
+
+    const form = document.getElementById("authForm");
+    const tabs = document.querySelectorAll(".auth-tab");
+    const signupFields = document.querySelectorAll(".signup-only");
+    const message = document.getElementById("authMessage");
+    const submit = document.getElementById("authSubmit");
+    const password = document.getElementById("password");
+
+    let mode = "login";
+
+
+    function showMessage(text, type = "error") {
+        message.textContent = text;
+        message.className = `auth-message ${type}`;
+        message.hidden = false;
+    }
+
+
+    function setMode(newMode) {
+
+        mode = newMode;
+
+        tabs.forEach(tab =>
+            tab.classList.toggle("active", tab.dataset.mode === mode)
+        );
+
+        signupFields.forEach(field => field.hidden = mode !== "signup");
+
+        const isSignup = mode === "signup";
+
+        document.getElementById("authTitle").textContent =
+            isSignup ? "Créer un compte" : "Bon retour 👋";
+
+        document.getElementById("authSubtitle").textContent =
+            isSignup
+                ? "Rejoignez Connect en quelques secondes."
+                : "Connectez-vous pour retrouver vos conversations.";
+
+        submit.textContent = isSignup ? "Créer mon compte" : "Se connecter";
+
+        password.autocomplete = isSignup ? "new-password" : "current-password";
+
+        message.hidden = true;
+
+    }
+
+
+    tabs.forEach(tab =>
+        tab.addEventListener("click", () => setMode(tab.dataset.mode))
+    );
+
+
+    // Traduction des erreurs Supabase les plus courantes
+    function translateError(error) {
+
+        const text = error?.message || "";
+
+        if (text.includes("Invalid login credentials")) return "E-mail ou mot de passe incorrect.";
+        if (text.includes("Email not confirmed")) return "Confirme d'abord ton adresse e-mail (vérifie ta boîte de réception).";
+        if (text.includes("already registered")) return "Un compte existe déjà avec cet e-mail.";
+        if (text.includes("Password should be")) return "Le mot de passe doit contenir au moins 6 caractères.";
+        if (text.includes("rate limit")) return "Trop de tentatives. Réessaie dans quelques minutes.";
+
+        return text || "Une erreur est survenue.";
+
+    }
+
+
+    form.addEventListener("submit", async event => {
+
+        event.preventDefault();
+
+        const email = document.getElementById("email").value.trim();
+        const pass = password.value;
+
+        if (!email || !pass) {
+            showMessage("Remplis l'e-mail et le mot de passe.");
+            return;
+        }
+
+        submit.disabled = true;
+        message.hidden = true;
+
+        try {
+
+            if (mode === "login") {
+
+                const { error } = await supabase.auth.signInWithPassword({
+                    email,
+                    password: pass
+                });
+
+                if (error) throw error;
+
+                location.replace("index.html");
+
+            } else {
+
+                const firstName = document.getElementById("firstName").value.trim();
+                const lastName = document.getElementById("lastName").value.trim();
+
+                if (!firstName) {
+                    showMessage("Indique au moins ton prénom.");
+                    return;
+                }
+
+                const { data, error } = await supabase.auth.signUp({
+                    email,
+                    password: pass,
+                    options: {
+                        data: { first_name: firstName, last_name: lastName },
+                        emailRedirectTo: new URL("index.html", location.href).href
+                    }
+                });
+
+                if (error) throw error;
+
+                if (data.session) {
+                    location.replace("index.html");
+                } else {
+                    setMode("login");
+                    showMessage(
+                        "Compte créé ! Un e-mail de confirmation t'a été envoyé. Clique sur le lien puis connecte-toi ici.",
+                        "success"
+                    );
+                }
+
+            }
+
+        } catch (error) {
+
+            showMessage(translateError(error));
+
+        } finally {
+
+            submit.disabled = false;
+
+        }
+
+    });
+
+</script>
+
+</body>
+</html>

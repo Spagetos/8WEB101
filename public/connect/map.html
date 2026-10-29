@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Connect — Map</title>
+
+    <!-- Leaflet : librairie de carte (gratuite, utilise OpenStreetMap) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+<div class="app">
+
+    <aside class="sidebar" id="sidebar" data-active="map"></aside>
+
+
+    <main class="main-content map-page">
+
+        <header class="topbar">
+
+            <div>
+                <h1>Map</h1>
+                <p>Visualisez la position de vos contacts.</p>
+            </div>
+
+            <button class="secondary-button" id="locationButton">
+                ⌖ Ma position
+            </button>
+
+        </header>
+
+
+        <section class="map-layout">
+
+            <div class="map-container">
+
+                <div id="map"></div>
+
+                <div class="map-controls">
+                    <button id="zoomIn" title="Zoomer">+</button>
+                    <button id="zoomOut" title="Dézoomer">−</button>
+                </div>
+
+                <div class="map-notice" id="mapNotice" hidden></div>
+
+                <div class="map-legend">
+                    <span><i class="legend-dot user"></i> Vous</span>
+                    <span><i class="legend-dot online"></i> Contacts en ligne</span>
+                </div>
+
+            </div>
+
+
+            <aside class="map-sidebar">
+
+                <div class="map-sidebar-header">
+                    <div>
+                        <h2>Contacts</h2>
+                        <p id="mapSidebarSubtitle">Chargement…</p>
+                    </div>
+                </div>
+
+                <div class="map-contact-search search-box">
+                    <span>⌕</span>
+                    <input type="text" id="mapSearch" placeholder="Rechercher...">
+                </div>
+
+                <div class="map-contact-list" id="mapContactList"></div>
+
+                <a href="contacts.html" class="view-all-contacts">
+                    Voir tous les contacts
+                    <span>→</span>
+                </a>
+
+            </aside>
+
+        </section>
+
+    </main>
+
+</div>
+
+
+<script type="module">
+
+    import {
+        initApp, getProfiles, avatarHTML, fullName, initials, colorClass, esc,
+        isOnline, onPresenceChange, distanceKm, formatDistance, timeAgo, showToast
+    } from "./js/app.js";
+
+
+    const { supabase, user, profile: me } = await initApp();
+
+    const L = window.L;
+
+    const listEl = document.getElementById("mapContactList");
+    const searchInput = document.getElementById("mapSearch");
+    const notice = document.getElementById("mapNotice");
+    const locationButton = document.getElementById("locationButton");
+
+    const profiles = await getProfiles();
+
+    const markers = new Map();   // id → marqueur Leaflet
+    let myPosition = me.latitude != null ? [me.latitude, me.longitude] : null;
+    let selectedId = new URLSearchParams(location.search).get("contact");
+
+
+    // =====================================================
+    // CARTE
+    // =====================================================
+
+    const DEFAULT_CENTER = [45.5019, -73.5674]; // Montréal, si aucune position
+
+    const map = L.map("map", { zoomControl: false })
+        .setView(myPosition || DEFAULT_CENTER, myPosition ? 13 : 11);
+
+    L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        maxZoom: 19,
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+    }).addTo(map);
+
+    document.getElementById("zoomIn").onclick = () => map.zoomIn();
+    document.getElementById("zoomOut").onclick = () => map.zoomOut();
+
+
+    function hasLocation(p) {
+        return p && p.latitude != null && p.longitude != null;
+    }
+
+
+    function pinIcon(p, isMe) {
+
+        const online = !isMe && isOnline(p.id);
+
+        return L.divIcon({
+            className: "map-pin-wrapper",
+            html: `
+                <div class="map-pin ${isMe ? "me" : ""} ${online ? "online" : ""} ${p.id === selectedId ? "selected" : ""}">
+                    ${isMe ? '<span class="marker-pulse"></span>' : ""}
+                    <span class="marker-avatar ${isMe ? "" : colorClass(p)}">${esc(initials(p))}</span>
+                </div>
+            `,
+            iconSize: [46, 46],
+            iconAnchor: [23, 23],
+            popupAnchor: [0, -26]
+        });
+
+    }
+
+
+    function popupHTML(p) {
+
+        const isMe = p.id === user.id;
+
+        const distance =
+            !isMe && myPosition
+                ? formatDistance(distanceKm(myPosition[0], myPosition[1], p.latitude, p.longitude))
+                : "";
+
+        return `
+            <div class="map-popup">
+                <strong>${isMe ? "Vous" : esc(fullName(p))}</strong>
+                <span>
+                    ${isMe ? "Votre position" : (isOnline(p.id) ? "En ligne" : "Hors ligne")}
+                    ${distance ? ` · ${distance}` : ""}
+                </span>
+                ${p.location_updated_at ? `<small>Mis à jour ${timeAgo(p.location_updated_at).toLowerCase()}</small>` : ""}
+                ${isMe ? "" : `<a href="messages.html?contact=${p.id}">Envoyer un message →</a>`}
+            </div>
+        `;
+
+    }
+
+
+    // Crée, déplace ou supprime le marqueur d'une personne
+    function upsertMarker(p) {
+
+        const isMe = p.id === user.id;
+
+        const position = isMe ? myPosition : (hasLocation(p) ? [p.latitude, p.longitude] : null);
+
+        let marker = markers.get(p.id);
+
+        if (!position) {
+            if (marker) {
+                marker.remove();
+                markers.delete(p.id);
+            }
+            return;
+        }
+
+        if (!marker) {
+
+            marker = L.marker(position, {
+                icon: pinIcon(p, isMe),
+                zIndexOffset: isMe ? 1000 : 0
+            }).addTo(map);
+
+            marker.bindPopup(() => popupHTML(profiles.get(p.id) || p));
+
+            marker.on("click", () => select(p.id, { fly: false }));
+
+            markers.set(p.id, marker);
+
+        } else {
+
+            marker.setLatLng(position);
+            marker.setIcon(pinIcon(p, isMe));
+
+        }
+
+    }
+
+
+    function refreshAllMarkers() {
+        profiles.forEach(p => upsertMarker(p));
+    }
+
+
+    // =====================================================
+    // LISTE À DROITE
+    // =====================================================
+
+    function renderList() {
+
+        const search = searchInput.value.toLowerCase().trim();
+
+        const located = [...profiles.values()]
+            .filter(p => p.id !== user.id && hasLocation(p));
+
+        const onlineCount = located.filter(p => isOnline(p.id)).length;
+
+        document.getElementById("mapSidebarSubtitle").textContent =
+            `${located.length} sur la carte · ${onlineCount} en ligne`;
+
+        const withDistance = located
+            .filter(p => fullName(p).toLowerCase().includes(search))
+            .map(p => ({
+                p,
+                km: myPosition
+                    ? distanceKm(myPosition[0], myPosition[1], p.latitude, p.longitude)
+                    : null
+            }))
+            .sort((a, b) =>
+                a.km != null && b.km != null
+                    ? a.km - b.km
+                    : fullName(a.p).localeCompare(fullName(b.p), "fr")
+            );
+
+        if (!located.length) {
+            listEl.innerHTML = `
+                <p class="empty-state">
+                    Aucun contact ne partage sa position pour le moment.
+                </p>`;
+            return;
+        }
+
+        if (!withDistance.length) {
+            listEl.innerHTML = `<p class="empty-state">Aucun résultat.</p>`;
+            return;
+        }
+
+        listEl.innerHTML = withDistance.map(({ p, km }) => {
+
+            const online = isOnline(p.id);
+
+            return `
+                <button class="map-contact ${p.id === selectedId ? "active" : ""}" data-id="${p.id}">
+
+                    ${avatarHTML(p, { online })}
+
+                    <div>
+                        <strong>${esc(fullName(p))}</strong>
+                        <span>${km != null ? formatDistance(km) : esc(p.role)}</span>
+                    </div>
+
+                    ${online ? '<span class="map-status"></span>' : ""}
+
+                </button>
+            `;
+
+        }).join("");
+
+    }
+
+
+    listEl.addEventListener("click", event => {
+
+        const button = event.target.closest(".map-contact");
+
+        if (button) select(button.dataset.id);
+
+    });
+
+    searchInput.addEventListener("input", renderList);
+
+
+    function select(id, { fly = true } = {}) {
+
+        const previous = selectedId;
+        selectedId = id;
+
+        [previous, id].forEach(personId => {
+            const p = profiles.get(personId);
+            if (p && markers.has(personId)) {
+                markers.get(personId).setIcon(pinIcon(p, personId === user.id));
+            }
+        });
+
+        const marker = markers.get(id);
+
+        if (marker) {
+            if (fly) map.flyTo(marker.getLatLng(), Math.max(map.getZoom(), 14), { duration: 0.8 });
+            marker.openPopup();
+        }
+
+        renderList();
+
+    }
+
+
+    // =====================================================
+    // GÉOLOCALISATION DE L'UTILISATEUR
+    // =====================================================
+
+    function updateNotice() {
+
+        if (!me.share_location) {
+            notice.innerHTML = `
+                Le partage de position est désactivé : vous seul voyez votre position.
+                <a href="settings.html">Modifier</a>`;
+            notice.hidden = false;
+        } else {
+            notice.hidden = true;
+        }
+
+    }
+
+
+    function locate({ fly = true } = {}) {
+
+        if (!navigator.geolocation) {
+            showToast("Votre navigateur ne permet pas la géolocalisation.", "error");
+            return;
+        }
+
+        locationButton.disabled = true;
+        locationButton.textContent = "⌖ Localisation…";
+
+        navigator.geolocation.getCurrentPosition(
+
+            async position => {
+
+                locationButton.disabled = false;
+                locationButton.textContent = "⌖ Ma position";
+
+                const { latitude, longitude } = position.coords;
+
+                myPosition = [latitude, longitude];
+
+                upsertMarker(me);
+                renderList();
+
+                if (fly) map.flyTo(myPosition, 14, { duration: 0.8 });
+
+                if (me.share_location) {
+
+                    const { error } = await supabase
+                        .from("profiles")
+                        .update({
+                            latitude,
+                            longitude,
+                            location_updated_at: new Date().toISOString()
+                        })
+                        .eq("id", user.id);
+
+                    if (error) {
+                        console.error(error);
+                        showToast("Impossible d'enregistrer votre position.", "error");
+                    }
+
+                }
+
+            },
+
+            error => {
+
+                locationButton.disabled = false;
+                locationButton.textContent = "⌖ Ma position";
+
+                const messages = {
+                    1: "Autorisez l'accès à votre position dans le navigateur.",
+                    2: "Position introuvable pour le moment.",
+                    3: "La localisation a pris trop de temps."
+                };
+
+                showToast(messages[error.code] || "Erreur de géolocalisation.", "error");
+
+            },
+
+            { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+
+        );
+
+    }
+
+
+    locationButton.addEventListener("click", () => locate());
+
+
+    // =====================================================
+    // TEMPS RÉEL : les positions bougent sans recharger
+    // =====================================================
+
+    supabase
+        .channel("map-profiles")
+        .on(
+            "postgres_changes",
+            { event: "*", schema: "public", table: "profiles" },
+            payload => {
+
+                const p = payload.new;
+
+                if (!p?.id || p.id === user.id) return;
+
+                profiles.set(p.id, p);
+                upsertMarker(p);
+                renderList();
+
+            }
+        )
+        .subscribe();
+
+
+    onPresenceChange(() => {
+        refreshAllMarkers();
+        renderList();
+    });
+
+
+    // =====================================================
+    // DÉMARRAGE
+    // =====================================================
+
+    updateNotice();
+    refreshAllMarkers();
+    renderList();
+
+    if (selectedId && markers.has(selectedId)) {
+
+        select(selectedId);
+
+    } else {
+
+        selectedId = null;
+
+        const points = [...markers.values()].map(m => m.getLatLng());
+
+        if (points.length > 1) {
+            map.fitBounds(L.latLngBounds(points), { padding: [60, 60], maxZoom: 14 });
+        }
+
+    }
+
+    // Position automatique à l'ouverture (le navigateur demande l'autorisation)
+    locate({ fly: !myPosition && !selectedId });
+
+</script>
+
+</body>
+</html>

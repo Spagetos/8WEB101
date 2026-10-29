@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Connect — Settings</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+<div class="app">
+
+    <aside class="sidebar" id="sidebar" data-active="settings"></aside>
+
+
+    <main class="main-content">
+
+        <header class="topbar">
+            <div>
+                <h1>Settings</h1>
+                <p>Personnalisez votre expérience Connect.</p>
+            </div>
+        </header>
+
+
+        <section class="settings-page">
+
+            <!-- PROFILE -->
+            <form class="settings-card" id="profileForm">
+
+                <div class="settings-card-header">
+                    <div>
+                        <h2>Profil</h2>
+                        <p>Gérez vos informations personnelles.</p>
+                    </div>
+                </div>
+
+
+                <div class="profile-settings">
+
+                    <div id="profileAvatar"></div>
+
+                    <div class="profile-info">
+
+                        <h3 id="profileName"></h3>
+                        <p id="profileRole"></p>
+
+                        <div class="color-picker" id="colorPicker" aria-label="Couleur de l'avatar"></div>
+
+                    </div>
+
+                </div>
+
+
+                <div class="settings-form">
+
+                    <div class="form-group">
+                        <label for="firstName">Prénom</label>
+                        <input id="firstName" type="text" maxlength="50" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="lastName">Nom</label>
+                        <input id="lastName" type="text" maxlength="50">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="role">Poste / statut</label>
+                        <input id="role" type="text" maxlength="60" placeholder="ex. Développeur, Étudiant…">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="email">Adresse e-mail</label>
+                        <input id="email" type="email" readonly>
+                    </div>
+
+                </div>
+
+
+                <div class="settings-actions">
+                    <button type="submit" class="primary-button" id="saveProfile">
+                        Enregistrer les modifications
+                    </button>
+                </div>
+
+            </form>
+
+
+            <!-- NOTIFICATIONS -->
+            <div class="settings-card">
+
+                <div class="settings-card-header">
+                    <div>
+                        <h2>Notifications</h2>
+                        <p>Choisissez comment vous souhaitez être informé.</p>
+                    </div>
+                </div>
+
+                <div class="settings-options">
+
+                    <div class="setting-option">
+                        <div>
+                            <strong>Notifications du navigateur</strong>
+                            <span>Afficher une notification système quand Connect est en arrière-plan.</span>
+                        </div>
+                        <label class="switch">
+                            <input type="checkbox" id="notifPush">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+
+                    <div class="setting-option">
+                        <div>
+                            <strong>Nouveaux messages</strong>
+                            <span>Être averti lorsqu'un contact vous écrit.</span>
+                        </div>
+                        <label class="switch">
+                            <input type="checkbox" id="notifMessages">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <!-- PRIVACY -->
+            <div class="settings-card">
+
+                <div class="settings-card-header">
+                    <div>
+                        <h2>Confidentialité</h2>
+                        <p>Contrôlez la visibilité de vos informations.</p>
+                    </div>
+                </div>
+
+                <div class="settings-options">
+
+                    <div class="setting-option">
+                        <div>
+                            <strong>Partager ma position</strong>
+                            <span>Permettre à vos contacts de voir votre position sur la carte. Si désactivé, votre position est effacée.</span>
+                        </div>
+                        <label class="switch">
+                            <input type="checkbox" id="shareLocation">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+
+                    <div class="setting-option">
+                        <div>
+                            <strong>Afficher mon statut en ligne</strong>
+                            <span>Permettre aux contacts de voir quand vous êtes en ligne.</span>
+                        </div>
+                        <label class="switch">
+                            <input type="checkbox" id="showOnline">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <!-- SECURITY -->
+            <div class="settings-card">
+
+                <div class="settings-card-header">
+                    <div>
+                        <h2>Sécurité</h2>
+                        <p>Gérez la sécurité de votre compte.</p>
+                    </div>
+                </div>
+
+                <div class="security-options">
+
+                    <button type="button" class="security-button" id="togglePassword">
+                        <div class="security-icon">🔒</div>
+                        <div>
+                            <strong>Modifier le mot de passe</strong>
+                            <span>Changez régulièrement votre mot de passe.</span>
+                        </div>
+                        <span>→</span>
+                    </button>
+
+                    <form class="password-form" id="passwordForm" hidden>
+
+                        <div class="form-group">
+                            <label for="newPassword">Nouveau mot de passe</label>
+                            <input id="newPassword" type="password" minlength="6" autocomplete="new-password" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="confirmPassword">Confirmer</label>
+                            <input id="confirmPassword" type="password" minlength="6" autocomplete="new-password" required>
+                        </div>
+
+                        <button type="submit" class="primary-button">Mettre à jour</button>
+
+                    </form>
+
+                    <button type="button" class="security-button" id="signOutOthers">
+                        <div class="security-icon">♢</div>
+                        <div>
+                            <strong>Déconnecter les autres appareils</strong>
+                            <span>Ferme toutes vos sessions sauf celle-ci.</span>
+                        </div>
+                        <span>→</span>
+                    </button>
+
+                </div>
+
+            </div>
+
+
+            <!-- DANGER -->
+            <div class="settings-card danger-card">
+
+                <div class="settings-card-header">
+                    <div>
+                        <h2>Zone sensible</h2>
+                        <p>Actions importantes concernant votre compte.</p>
+                    </div>
+                </div>
+
+                <button class="danger-button" id="logoutButton">Se déconnecter</button>
+
+            </div>
+
+        </section>
+
+    </main>
+
+</div>
+
+
+<script type="module">
+
+    import {
+        initApp, avatarHTML, fullName, COLORS, showToast,
+        updateSidebarProfile, setShowOnline,
+        NOTIF_KEYS, getNotifSetting, setNotifSetting
+    } from "./js/app.js";
+
+
+    const { supabase, user, profile } = await initApp();
+
+    const firstName = document.getElementById("firstName");
+    const lastName = document.getElementById("lastName");
+    const role = document.getElementById("role");
+    const colorPicker = document.getElementById("colorPicker");
+
+
+    // =====================================================
+    // PROFIL
+    // =====================================================
+
+    // copie modifiable pour l'aperçu en direct
+    const draft = { ...profile };
+
+
+    function renderPreview() {
+
+        draft.first_name = firstName.value.trim();
+        draft.last_name = lastName.value.trim();
+        draft.role = role.value.trim() || "Membre";
+
+        document.getElementById("profileAvatar").innerHTML =
+            avatarHTML(draft, { extraClass: "profile-large-avatar" });
+
+        document.getElementById("profileName").textContent = fullName(draft);
+        document.getElementById("profileRole").textContent = draft.role;
+
+        colorPicker.querySelectorAll("button").forEach(button =>
+            button.classList.toggle("active", button.dataset.color === draft.color)
+        );
+
+    }
+
+
+    firstName.value = profile.first_name;
+    lastName.value = profile.last_name;
+    role.value = profile.role;
+    document.getElementById("email").value = user.email;
+
+    colorPicker.innerHTML = COLORS.map(color => `
+        <button type="button" class="color-chip avatar-${color}" data-color="${color}" title="${color}"></button>
+    `).join("");
+
+    colorPicker.addEventListener("click", event => {
+
+        const chip = event.target.closest(".color-chip");
+
+        if (!chip) return;
+
+        draft.color = chip.dataset.color;
+        renderPreview();
+
+    });
+
+    [firstName, lastName, role].forEach(input =>
+        input.addEventListener("input", renderPreview)
+    );
+
+    renderPreview();
+
+
+    document.getElementById("profileForm")
+        .addEventListener("submit", async event => {
+
+            event.preventDefault();
+
+            if (!firstName.value.trim()) {
+                showToast("Le prénom est obligatoire.", "error");
+                firstName.focus();
+                return;
+            }
+
+            const button = document.getElementById("saveProfile");
+            button.disabled = true;
+
+            const { data, error } = await supabase
+                .from("profiles")
+                .update({
+                    first_name: draft.first_name,
+                    last_name: draft.last_name,
+                    role: draft.role,
+                    color: draft.color
+                })
+                .eq("id", user.id)
+                .select()
+                .single();
+
+            button.disabled = false;
+
+            if (error) {
+                console.error(error);
+                showToast("Erreur lors de l'enregistrement.", "error");
+                return;
+            }
+
+            Object.assign(profile, data);
+            updateSidebarProfile(data);
+
+            const originalText = button.textContent;
+            button.textContent = "Modifications enregistrées ✓";
+            setTimeout(() => button.textContent = originalText, 2000);
+
+        });
+
+
+    // =====================================================
+    // NOTIFICATIONS (préférences gardées dans le navigateur)
+    // =====================================================
+
+    const notifPush = document.getElementById("notifPush");
+    const notifMessages = document.getElementById("notifMessages");
+
+    const notificationsSupported = "Notification" in window;
+
+    notifPush.checked =
+        notificationsSupported &&
+        Notification.permission === "granted" &&
+        getNotifSetting(NOTIF_KEYS.push, false);
+
+    notifMessages.checked = getNotifSetting(NOTIF_KEYS.messages, true);
+
+
+    notifPush.addEventListener("change", async () => {
+
+        if (!notifPush.checked) {
+            setNotifSetting(NOTIF_KEYS.push, false);
+            return;
+        }
+
+        if (!notificationsSupported) {
+            notifPush.checked = false;
+            showToast("Votre navigateur ne gère pas les notifications.", "error");
+            return;
+        }
+
+        const permission = await Notification.requestPermission();
+
+        if (permission !== "granted") {
+            notifPush.checked = false;
+            showToast("Notifications refusées dans le navigateur.", "error");
+            return;
+        }
+
+        setNotifSetting(NOTIF_KEYS.push, true);
+        showToast("Notifications activées.", "success");
+
+    });
+
+
+    notifMessages.addEventListener("change", () =>
+        setNotifSetting(NOTIF_KEYS.messages, notifMessages.checked)
+    );
+
+
+    // =====================================================
+    // CONFIDENTIALITÉ (enregistrée dans Supabase)
+    // =====================================================
+
+    const shareLocation = document.getElementById("shareLocation");
+    const showOnline = document.getElementById("showOnline");
+
+    shareLocation.checked = profile.share_location;
+    showOnline.checked = profile.show_online;
+
+
+    async function savePrivacy(field, toggle) {
+
+        toggle.disabled = true;
+
+        const { error } = await supabase
+            .from("profiles")
+            .update({ [field]: toggle.checked })
+            .eq("id", user.id);
+
+        toggle.disabled = false;
+
+        if (error) {
+            console.error(error);
+            toggle.checked = !toggle.checked;
+            showToast("Impossible d'enregistrer ce réglage.", "error");
+            return false;
+        }
+
+        profile[field] = toggle.checked;
+        return true;
+
+    }
+
+
+    shareLocation.addEventListener("change", async () => {
+
+        if (await savePrivacy("share_location", shareLocation)) {
+            showToast(
+                shareLocation.checked
+                    ? "Position partagée. Ouvrez la carte pour la mettre à jour."
+                    : "Position masquée et effacée.",
+                "success"
+            );
+        }
+
+    });
+
+
+    showOnline.addEventListener("change", async () => {
+
+        if (await savePrivacy("show_online", showOnline)) {
+            await setShowOnline(showOnline.checked);
+        }
+
+    });
+
+
+    // =====================================================
+    // SÉCURITÉ
+    // =====================================================
+
+    const passwordForm = document.getElementById("passwordForm");
+
+    document.getElementById("togglePassword")
+        .addEventListener("click", () => {
+            passwordForm.hidden = !passwordForm.hidden;
+            if (!passwordForm.hidden) document.getElementById("newPassword").focus();
+        });
+
+
+    passwordForm.addEventListener("submit", async event => {
+
+        event.preventDefault();
+
+        const newPassword = document.getElementById("newPassword").value;
+        const confirmPassword = document.getElementById("confirmPassword").value;
+
+        if (newPassword.length < 6) {
+            showToast("Au moins 6 caractères.", "error");
+            return;
+        }
+
+        if (newPassword !== confirmPassword) {
+            showToast("Les deux mots de passe ne correspondent pas.", "error");
+            return;
+        }
+
+        const { error } = await supabase.auth.updateUser({ password: newPassword });
+
+        if (error) {
+            console.error(error);
+            showToast(error.message || "Erreur lors du changement de mot de passe.", "error");
+            return;
+        }
+
+        passwordForm.reset();
+        passwordForm.hidden = true;
+        showToast("Mot de passe modifié ✓", "success");
+
+    });
+
+
+    document.getElementById("signOutOthers")
+        .addEventListener("click", async () => {
+
+            if (!confirm("Déconnecter tous vos autres appareils ?")) return;
+
+            const { error } = await supabase.auth.signOut({ scope: "others" });
+
+            showToast(
+                error ? "Erreur lors de la déconnexion des appareils." : "Les autres appareils ont été déconnectés.",
+                error ? "error" : "success"
+            );
+
+        });
+
+
+    document.getElementById("logoutButton")
+        .addEventListener("click", async () => {
+
+            if (!confirm("Voulez-vous vraiment vous déconnecter ?")) return;
+
+            await supabase.auth.signOut();
+            location.replace("login.html");
+
+        });
+
+</script>
+
+</body>
+</html>

@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Connect — Messages</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+<div class="app">
+
+    <aside class="sidebar" id="sidebar" data-active="messages"></aside>
+
+
+    <main class="main-content messages-page">
+
+        <header class="topbar messages-topbar">
+
+            <div>
+                <h1>Messages</h1>
+                <p>Gérez vos conversations.</p>
+            </div>
+
+            <button class="primary-button" id="newConversationButton">
+                <span>+</span>
+                Nouveau message
+            </button>
+
+        </header>
+
+
+        <section class="messages-container">
+
+            <!-- CONVERSATIONS -->
+            <aside class="conversation-sidebar">
+
+                <div class="conversation-search">
+                    <div class="search-box">
+                        <span>⌕</span>
+                        <input type="text" id="conversationSearch" placeholder="Rechercher un membre...">
+                    </div>
+                </div>
+
+                <div class="conversation-list" id="conversationList">
+                    <p class="empty-state">Chargement…</p>
+                </div>
+
+            </aside>
+
+
+            <!-- CHAT -->
+            <section class="chat-area">
+
+                <header class="chat-header" id="chatHeader" hidden>
+
+                    <div class="chat-user">
+                        <div id="chatAvatar"></div>
+                        <div>
+                            <strong id="chatName"></strong>
+                            <span id="chatStatus"></span>
+                        </div>
+                    </div>
+
+                    <div class="chat-actions">
+                        <a class="icon-button" id="chatMapLink" title="Voir sur la carte">⌖</a>
+                    </div>
+
+                </header>
+
+
+                <div class="chat-messages" id="chatMessages">
+
+                    <div class="chat-empty">
+                        <div class="chat-empty-icon">▱</div>
+                        <strong>Vos messages</strong>
+                        <p>Choisissez une personne dans la liste pour démarrer une conversation.</p>
+                    </div>
+
+                </div>
+
+
+                <form class="message-composer" id="messageForm">
+
+                    <input
+                        type="text"
+                        id="messageInput"
+                        placeholder="Écrire un message..."
+                        autocomplete="off"
+                        maxlength="2000"
+                        disabled
+                    >
+
+                    <button type="submit" class="send-button" id="sendButton" disabled title="Envoyer">
+                        ➤
+                    </button>
+
+                </form>
+
+            </section>
+
+        </section>
+
+    </main>
+
+</div>
+
+
+<script type="module">
+
+    import {
+        initApp, getProfiles, loadConversations, refreshUnreadBadge,
+        avatarHTML, fullName, esc, formatTime, dayLabel,
+        isOnline, onPresenceChange, showToast
+    } from "./js/app.js";
+
+
+    const { supabase, user } = await initApp();
+
+
+    const listEl = document.getElementById("conversationList");
+    const searchInput = document.getElementById("conversationSearch");
+    const chatHeader = document.getElementById("chatHeader");
+    const chatAvatar = document.getElementById("chatAvatar");
+    const chatName = document.getElementById("chatName");
+    const chatStatus = document.getElementById("chatStatus");
+    const chatMapLink = document.getElementById("chatMapLink");
+    const chatMessages = document.getElementById("chatMessages");
+    const messageForm = document.getElementById("messageForm");
+    const messageInput = document.getElementById("messageInput");
+    const sendButton = document.getElementById("sendButton");
+
+
+    const profiles = await getProfiles();
+    const others = [...profiles.values()].filter(p => p.id !== user.id);
+    const conversations = await loadConversations(user.id);
+
+    let activeId = null;
+    let lastRenderedDay = null;
+
+
+    // =====================================================
+    // LISTE DES CONVERSATIONS
+    // =====================================================
+
+    function renderList() {
+
+        const search = searchInput.value.toLowerCase().trim();
+
+        const sorted = [...others].sort((a, b) => {
+
+            const dateA = conversations.get(a.id)?.last.created_at || "";
+            const dateB = conversations.get(b.id)?.last.created_at || "";
+
+            if (dateA !== dateB) return dateB.localeCompare(dateA);
+
+            return fullName(a).localeCompare(fullName(b), "fr");
+
+        });
+
+        const visible = sorted.filter(p =>
+            fullName(p).toLowerCase().includes(search) ||
+            (p.email || "").toLowerCase().includes(search)
+        );
+
+        if (!others.length) {
+            listEl.innerHTML = `<p class="empty-state">Personne d'autre n'est encore inscrit.</p>`;
+            return;
+        }
+
+        if (!visible.length) {
+            listEl.innerHTML = `<p class="empty-state">Aucun résultat.</p>`;
+            return;
+        }
+
+        listEl.innerHTML = visible.map(p => {
+
+            const conversation = conversations.get(p.id);
+
+            const preview = conversation
+                ? (conversation.last.sender_id === user.id ? "Vous : " : "") + conversation.last.content
+                : "Démarrer la conversation";
+
+            return `
+                <button
+                    class="conversation ${p.id === activeId ? "active" : ""}"
+                    data-id="${p.id}"
+                    title="${esc(fullName(p))}"
+                >
+                    ${avatarHTML(p, { online: isOnline(p.id) })}
+
+                    <div class="conversation-info">
+
+                        <div class="conversation-top">
+                            <strong>${esc(fullName(p))}</strong>
+                            <span>${conversation ? formatTime(conversation.last.created_at) : ""}</span>
+                        </div>
+
+                        <div class="conversation-bottom">
+                            <span class="${conversation ? "" : "muted"}">${esc(preview)}</span>
+                            ${conversation?.unread ? `<b>${conversation.unread}</b>` : ""}
+                        </div>
+
+                    </div>
+                </button>
+            `;
+
+        }).join("");
+
+    }
+
+
+    listEl.addEventListener("click", event => {
+
+        const button = event.target.closest(".conversation");
+
+        if (button) openConversation(button.dataset.id);
+
+    });
+
+    searchInput.addEventListener("input", renderList);
+
+
+    // =====================================================
+    // AFFICHAGE D'UNE CONVERSATION
+    // =====================================================
+
+    function messageHTML(message) {
+
+        const sent = message.sender_id === user.id;
+        const other = profiles.get(activeId);
+
+        let html = "";
+
+        const day = dayLabel(message.created_at);
+
+        if (day !== lastRenderedDay) {
+            html += `<div class="date-divider"><span>${esc(day)}</span></div>`;
+            lastRenderedDay = day;
+        }
+
+        html += `
+            <div class="message ${sent ? "sent" : "received"}">
+
+                ${sent ? "" : avatarHTML(other, { extraClass: "message-avatar" })}
+
+                <div class="message-content">
+
+                    <div class="message-bubble">${esc(message.content)}</div>
+
+                    <span class="message-time">
+                        ${new Date(message.created_at).toLocaleTimeString("fr-CA", { hour: "2-digit", minute: "2-digit" })}
+                        ${sent && message.read_at ? " · Lu" : ""}
+                    </span>
+
+                </div>
+
+            </div>
+        `;
+
+        return html;
+
+    }
+
+
+    function appendMessage(message) {
+
+        chatMessages.querySelector(".chat-empty")?.remove();
+
+        chatMessages.insertAdjacentHTML("beforeend", messageHTML(message));
+
+        scrollChatToBottom();
+
+    }
+
+
+    function updateChatStatus() {
+
+        if (!activeId) return;
+
+        const online = isOnline(activeId);
+
+        chatStatus.textContent = online ? "En ligne" : "Hors ligne";
+        chatStatus.classList.toggle("offline", !online);
+
+        chatAvatar.innerHTML = avatarHTML(profiles.get(activeId), { online });
+
+    }
+
+
+    async function openConversation(contactId) {
+
+        const contact = profiles.get(contactId);
+
+        if (!contact || contactId === user.id) return;
+
+        activeId = contactId;
+        lastRenderedDay = null;
+
+        history.replaceState(null, "", `?contact=${contactId}`);
+
+        chatHeader.hidden = false;
+        chatName.textContent = fullName(contact);
+        chatMapLink.href = `map.html?contact=${contactId}`;
+        updateChatStatus();
+
+        messageInput.disabled = false;
+        sendButton.disabled = false;
+        messageInput.placeholder = `Écrire à ${contact.first_name || fullName(contact)}...`;
+
+        renderList();
+
+        chatMessages.innerHTML = `<p class="empty-state">Chargement…</p>`;
+
+        const { data, error } = await supabase
+            .from("messages")
+            .select("*")
+            .or(
+                `and(sender_id.eq.${user.id},receiver_id.eq.${contactId}),` +
+                `and(sender_id.eq.${contactId},receiver_id.eq.${user.id})`
+            )
+            .order("created_at", { ascending: false })
+            .limit(300);
+
+        // l'utilisateur a peut-être cliqué ailleurs pendant le chargement
+        if (activeId !== contactId) return;
+
+        if (error) {
+            console.error(error);
+            chatMessages.innerHTML = `<p class="empty-state">Impossible de charger la conversation.</p>`;
+            return;
+        }
+
+        if (!data.length) {
+            chatMessages.innerHTML = `
+                <div class="chat-empty">
+                    ${avatarHTML(contact, { extraClass: "large-avatar" })}
+                    <strong>${esc(fullName(contact))}</strong>
+                    <p>Aucun message pour l'instant. Dites bonjour 👋</p>
+                </div>`;
+        } else {
+            chatMessages.innerHTML = data.reverse().map(messageHTML).join("");
+        }
+
+        scrollChatToBottom();
+        messageInput.focus();
+
+        markAsRead(contactId);
+
+    }
+
+
+    async function markAsRead(contactId) {
+
+        const conversation = conversations.get(contactId);
+
+        if (!conversation?.unread) return;
+
+        const { error } = await supabase
+            .from("messages")
+            .update({ read_at: new Date().toISOString() })
+            .eq("sender_id", contactId)
+            .eq("receiver_id", user.id)
+            .is("read_at", null);
+
+        if (error) {
+            console.error(error);
+            return;
+        }
+
+        conversation.unread = 0;
+        renderList();
+        refreshUnreadBadge();
+
+    }
+
+
+    function scrollChatToBottom() {
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+
+    // =====================================================
+    // ENVOI D'UN MESSAGE
+    // =====================================================
+
+    messageForm.addEventListener("submit", async event => {
+
+        event.preventDefault();
+
+        const content = messageInput.value.trim();
+
+        if (!content || !activeId) return;
+
+        sendButton.disabled = true;
+
+        const receiverId = activeId;
+
+        const { data, error } = await supabase
+            .from("messages")
+            .insert({ receiver_id: receiverId, content })
+            .select()
+            .single();
+
+        sendButton.disabled = false;
+
+        if (error) {
+            console.error(error);
+            showToast("Le message n'a pas pu être envoyé.", "error");
+            return;
+        }
+
+        messageInput.value = "";
+        messageInput.focus();
+
+        const conversation = conversations.get(receiverId) || { unread: 0 };
+        conversation.last = data;
+        conversations.set(receiverId, conversation);
+
+        if (activeId === receiverId) appendMessage(data);
+
+        renderList();
+
+    });
+
+
+    // =====================================================
+    // TEMPS RÉEL
+    // =====================================================
+
+    // Message reçu (l'événement vient de js/app.js)
+    window.addEventListener("connect:message", event => {
+
+        const message = event.detail;
+        const senderId = message.sender_id;
+
+        const conversation = conversations.get(senderId) || { unread: 0 };
+        conversation.last = message;
+
+        if (senderId === activeId && !document.hidden) {
+            appendMessage(message);
+            conversation.unread = 1;
+            conversations.set(senderId, conversation);
+            markAsRead(senderId);
+        } else {
+            if (senderId === activeId) appendMessage(message);
+            conversation.unread++;
+            conversations.set(senderId, conversation);
+        }
+
+        renderList();
+
+    });
+
+
+    // Quand on revient sur l'onglet, on marque la conversation ouverte comme lue
+    document.addEventListener("visibilitychange", () => {
+        if (!document.hidden && activeId) markAsRead(activeId);
+    });
+
+
+    onPresenceChange(() => {
+        renderList();
+        updateChatStatus();
+    });
+
+
+    document.getElementById("newConversationButton")
+        .addEventListener("click", () => {
+            searchInput.value = "";
+            renderList();
+            searchInput.focus();
+        });
+
+
+    // =====================================================
+    // DÉMARRAGE
+    // =====================================================
+
+    renderList();
+
+    const contactFromURL = new URLSearchParams(location.search).get("contact");
+
+    if (contactFromURL && profiles.has(contactFromURL)) {
+        openConversation(contactFromURL);
+    } else if (window.innerWidth > 760 && conversations.size) {
+        openConversation(conversations.keys().next().value);
+    }
+
+</script>
+
+</body>
+</html>

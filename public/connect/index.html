@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Connect — Accueil</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+<div class="app">
+
+    <aside class="sidebar" id="sidebar" data-active="home"></aside>
+
+
+    <main class="main-content">
+
+        <header class="topbar">
+
+            <div>
+                <h1 id="welcomeTitle">Bienvenue</h1>
+                <p>Voici un aperçu de votre espace Connect.</p>
+            </div>
+
+            <div class="topbar-actions">
+                <a href="settings.html" id="topbarAvatar" title="Mon profil"></a>
+            </div>
+
+        </header>
+
+
+        <section class="dashboard">
+
+            <!-- STATS -->
+            <div class="stats-grid">
+
+                <div class="stat-card">
+                    <div class="stat-icon blue">▱</div>
+                    <div>
+                        <span class="stat-label">Messages</span>
+                        <strong class="stat-value" id="statMessages">–</strong>
+                        <small class="stat-positive" id="statMessagesSub">&nbsp;</small>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-icon purple">♙</div>
+                    <div>
+                        <span class="stat-label">Contacts</span>
+                        <strong class="stat-value" id="statContacts">–</strong>
+                        <small class="stat-positive" id="statContactsSub">&nbsp;</small>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-icon green">⌖</div>
+                    <div>
+                        <span class="stat-label">En ligne</span>
+                        <strong class="stat-value" id="statOnline">–</strong>
+                        <small class="stat-positive">Maintenant</small>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-icon orange">◷</div>
+                    <div>
+                        <span class="stat-label">Non lus</span>
+                        <strong class="stat-value" id="statUnread">–</strong>
+                        <small class="stat-positive" id="statUnreadSub">&nbsp;</small>
+                    </div>
+                </div>
+
+            </div>
+
+
+            <div class="dashboard-grid">
+
+                <!-- RECENT MESSAGES -->
+                <section class="panel">
+
+                    <div class="panel-header">
+                        <div>
+                            <h2>Messages récents</h2>
+                            <p>Vos dernières conversations</p>
+                        </div>
+                        <a href="messages.html" class="text-button">Voir tout</a>
+                    </div>
+
+                    <div class="message-list" id="recentMessages">
+                        <p class="empty-state">Chargement…</p>
+                    </div>
+
+                </section>
+
+
+                <!-- NEW MEMBERS -->
+                <section class="panel">
+
+                    <div class="panel-header">
+                        <div>
+                            <h2>Nouveaux membres</h2>
+                            <p>Derniers inscrits sur Connect</p>
+                        </div>
+                    </div>
+
+                    <div class="activity-list" id="newMembers">
+                        <p class="empty-state">Chargement…</p>
+                    </div>
+
+                </section>
+
+            </div>
+
+
+            <!-- QUICK ACTIONS -->
+            <section class="quick-actions-section">
+
+                <div class="section-heading">
+                    <h2>Actions rapides</h2>
+                    <p>Accédez rapidement aux fonctionnalités principales.</p>
+                </div>
+
+                <div class="quick-actions">
+
+                    <a href="messages.html" class="quick-action">
+                        <div class="quick-action-icon blue">▱</div>
+                        <div>
+                            <strong>Envoyer un message</strong>
+                            <span>Commencer une conversation</span>
+                        </div>
+                        <span class="arrow">→</span>
+                    </a>
+
+                    <a href="contacts.html" class="quick-action">
+                        <div class="quick-action-icon purple">♙</div>
+                        <div>
+                            <strong>Voir mes contacts</strong>
+                            <span>Parcourir les membres</span>
+                        </div>
+                        <span class="arrow">→</span>
+                    </a>
+
+                    <a href="map.html" class="quick-action">
+                        <div class="quick-action-icon green">⌖</div>
+                        <div>
+                            <strong>Ouvrir la carte</strong>
+                            <span>Voir vos contacts sur la carte</span>
+                        </div>
+                        <span class="arrow">→</span>
+                    </a>
+
+                </div>
+
+            </section>
+
+        </section>
+
+    </main>
+
+</div>
+
+
+<script type="module">
+
+    import {
+        initApp, getProfiles, loadConversations, avatarHTML, fullName,
+        esc, formatTime, timeAgo, isOnline, onPresenceChange
+    } from "./js/app.js";
+
+
+    const { supabase, user, profile } = await initApp();
+
+
+    document.getElementById("welcomeTitle").textContent =
+        `Bienvenue, ${profile.first_name || fullName(profile)}`;
+
+    document.getElementById("topbarAvatar").innerHTML =
+        avatarHTML(profile, { extraClass: "topbar-avatar" });
+
+
+    const [profiles, conversations] = await Promise.all([
+        getProfiles(),
+        loadConversations(user.id)
+    ]);
+
+    const others = [...profiles.values()].filter(p => p.id !== user.id);
+
+
+    // ---------- Statistiques ----------
+
+    const { count: receivedCount } = await supabase
+        .from("messages")
+        .select("id", { count: "exact", head: true })
+        .eq("receiver_id", user.id);
+
+    const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString();
+
+    const { count: weekCount } = await supabase
+        .from("messages")
+        .select("id", { count: "exact", head: true })
+        .gte("created_at", weekAgo);
+
+    const newMembers = others.filter(p => p.created_at >= weekAgo).length;
+
+    const unread = [...conversations.values()]
+        .reduce((total, conversation) => total + conversation.unread, 0);
+
+    const unreadConversations = [...conversations.values()]
+        .filter(conversation => conversation.unread > 0).length;
+
+
+    document.getElementById("statMessages").textContent = receivedCount ?? 0;
+    document.getElementById("statMessagesSub").textContent = `${weekCount ?? 0} cette semaine`;
+
+    document.getElementById("statContacts").textContent = others.length;
+    document.getElementById("statContactsSub").textContent =
+        newMembers ? `+${newMembers} cette semaine` : "Membres inscrits";
+
+    document.getElementById("statUnread").textContent = unread;
+    document.getElementById("statUnreadSub").textContent =
+        unread ? `Dans ${unreadConversations} conversation${unreadConversations > 1 ? "s" : ""}` : "Tout est lu ✓";
+
+
+    // ---------- Messages récents ----------
+
+    function renderRecent() {
+
+        const list = document.getElementById("recentMessages");
+
+        const recent = [...conversations.entries()].slice(0, 5);
+
+        if (!recent.length) {
+            list.innerHTML = `
+                <p class="empty-state">
+                    Aucune conversation pour l'instant.
+                    <a href="messages.html" class="text-button">Écrire à quelqu'un</a>
+                </p>`;
+            return;
+        }
+
+        list.innerHTML = recent.map(([otherId, conversation]) => {
+
+            const other = profiles.get(otherId);
+            const mine = conversation.last.sender_id === user.id;
+
+            return `
+                <a href="messages.html?contact=${otherId}" class="message-preview">
+
+                    ${avatarHTML(other, { online: isOnline(otherId) })}
+
+                    <div class="message-preview-content">
+                        <div class="message-preview-top">
+                            <strong>${esc(fullName(other))}</strong>
+                            <span>${formatTime(conversation.last.created_at)}</span>
+                        </div>
+                        <p>${mine ? "Vous : " : ""}${esc(conversation.last.content)}</p>
+                    </div>
+
+                    ${conversation.unread ? `<span class="unread-count">${conversation.unread}</span>` : ""}
+
+                </a>
+            `;
+
+        }).join("");
+
+    }
+
+
+    // ---------- Nouveaux membres ----------
+
+    function renderMembers() {
+
+        const list = document.getElementById("newMembers");
+
+        const latest = [...others]
+            .sort((a, b) => b.created_at.localeCompare(a.created_at))
+            .slice(0, 4);
+
+        if (!latest.length) {
+            list.innerHTML = `
+                <p class="empty-state">
+                    Vous êtes le premier membre ! Invitez quelqu'un à créer un compte.
+                </p>`;
+            return;
+        }
+
+        list.innerHTML = latest.map(member => `
+            <a href="messages.html?contact=${member.id}" class="activity-item">
+                ${avatarHTML(member, { extraClass: "activity-avatar", online: isOnline(member.id) })}
+                <div>
+                    <strong>${esc(fullName(member))}</strong>
+                    <p>${esc(member.role)} · a rejoint Connect</p>
+                    <small>${timeAgo(member.created_at)}</small>
+                </div>
+            </a>
+        `).join("");
+
+    }
+
+
+    function renderOnline() {
+        const count = others.filter(p => isOnline(p.id)).length;
+        document.getElementById("statOnline").textContent = count;
+    }
+
+
+    renderRecent();
+    renderMembers();
+    renderOnline();
+
+    onPresenceChange(() => {
+        renderOnline();
+        renderRecent();
+        renderMembers();
+    });
+
+
+    // Nouveau message reçu pendant qu'on est sur l'accueil
+    window.addEventListener("connect:message", async () => {
+
+        const fresh = await loadConversations(user.id);
+
+        conversations.clear();
+        fresh.forEach((value, key) => conversations.set(key, value));
+
+        const total = [...conversations.values()].reduce((t, c) => t + c.unread, 0);
+        document.getElementById("statUnread").textContent = total;
+
+        renderRecent();
+
+    });
+
+</script>
+
+</body>
+</html>
