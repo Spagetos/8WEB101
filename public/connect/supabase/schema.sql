@@ -1,9 +1,5 @@
 -- =========================================================
 -- CONNECT — Schéma de la base de données Supabase
---
--- À exécuter une seule fois :
--- Supabase > SQL Editor > New query > coller ce fichier > Run
--- (le script peut être relancé sans casser ce qui existe)
 -- =========================================================
 
 
