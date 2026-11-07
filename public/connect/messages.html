@@ -33,7 +33,7 @@
 
         <section class="messages-container">
 
-            <!-- CONVERSATIONS -->
+            <!-- Liste des conversations et champ de recherche -->
             <aside class="conversation-sidebar">
 
                 <div class="conversation-search">
@@ -50,7 +50,7 @@
             </aside>
 
 
-            <!-- CHAT -->
+            <!-- Zone principale où s'affichent les messages -->
             <section class="chat-area">
 
                 <header class="chat-header" id="chatHeader" hidden>
@@ -109,16 +109,17 @@
 
 <script type="module">
 
+    // Importation des fonctions nécessaires depuis le fichier principal de l'application
     import {
         initApp, getProfiles, loadConversations, refreshUnreadBadge,
         avatarHTML, fullName, esc, formatTime, dayLabel,
         isOnline, onPresenceChange, showToast
     } from "./js/app.js";
 
-
+    // Initialisation de l'application et récupération de Supabase et de l'utilisateur connecté
     const { supabase, user } = await initApp();
 
-
+    // Récupération des éléments HTML utilisés pour gérer les conversations
     const listEl = document.getElementById("conversationList");
     const searchInput = document.getElementById("conversationSearch");
     const chatHeader = document.getElementById("chatHeader");
@@ -132,6 +133,7 @@
     const sendButton = document.getElementById("sendButton");
 
 
+    // Chargement des profils et des conversations de l'utilisateur
     const profiles = await getProfiles();
     const others = [...profiles.values()].filter(p => p.id !== user.id);
     const conversations = await loadConversations(user.id);
@@ -144,6 +146,7 @@
     // LISTE DES CONVERSATIONS
     // =====================================================
 
+    // Affiche la liste des contacts et leurs derniers messages
     function renderList() {
 
         const search = searchInput.value.toLowerCase().trim();
@@ -159,6 +162,7 @@
 
         });
 
+        // Garde uniquement les contacts correspondant à la recherche
         const visible = sorted.filter(p =>
             fullName(p).toLowerCase().includes(search) ||
             (p.email || "").toLowerCase().includes(search)
@@ -174,6 +178,7 @@
             return;
         }
 
+        // Création d'un élément pour chaque contact de la liste
         listEl.innerHTML = visible.map(p => {
 
             const conversation = conversations.get(p.id);
@@ -210,7 +215,7 @@
 
     }
 
-
+    // Détecte le clic sur une conversation dans la liste
     listEl.addEventListener("click", event => {
 
         const button = event.target.closest(".conversation");
@@ -226,6 +231,7 @@
     // AFFICHAGE D'UNE CONVERSATION
     // =====================================================
 
+    // Prépare le code HTML d'un message selon son expéditeur et sa date
     function messageHTML(message) {
 
         const sent = message.sender_id === user.id;
@@ -235,11 +241,13 @@
 
         const day = dayLabel(message.created_at);
 
+        // Ajoute un séparateur lorsque les messages changent de jour
         if (day !== lastRenderedDay) {
             html += `<div class="date-divider"><span>${esc(day)}</span></div>`;
             lastRenderedDay = day;
         }
 
+        // Affiche le message avec un style différent selon son expéditeur
         html += `
             <div class="message ${sent ? "sent" : "received"}">
 
@@ -264,6 +272,7 @@
     }
 
 
+    // Ajoute un nouveau message à la fin de la conversation
     function appendMessage(message) {
 
         chatMessages.querySelector(".chat-empty")?.remove();
@@ -275,6 +284,7 @@
     }
 
 
+    // Met à jour le statut et l'avatar du contact dans l'en-tête de la conversation
     function updateChatStatus() {
 
         if (!activeId) return;
@@ -288,7 +298,7 @@
 
     }
 
-
+    // Charge et affiche les messages échangés avec le contact sélectionné
     async function openConversation(contactId) {
 
         const contact = profiles.get(contactId);
@@ -313,6 +323,7 @@
 
         chatMessages.innerHTML = `<p class="empty-state">Chargement…</p>`;
 
+        // Récupère les messages échangés entre l'utilisateur et le contact dans Supabase
         const { data, error } = await supabase
             .from("messages")
             .select("*")
@@ -332,6 +343,7 @@
             return;
         }
 
+        // Affiche un message d'accueil si la conversation est encore vide
         if (!data.length) {
             chatMessages.innerHTML = `
                 <div class="chat-empty">
@@ -350,7 +362,7 @@
 
     }
 
-
+    // Met à jour le statut de lecture des messages reçus
     async function markAsRead(contactId) {
 
         const conversation = conversations.get(contactId);
@@ -375,7 +387,7 @@
 
     }
 
-
+    // Fait défiler la zone de discussion jusqu'au dernier message
     function scrollChatToBottom() {
         chatMessages.scrollTop = chatMessages.scrollHeight;
     }
@@ -385,6 +397,7 @@
     // ENVOI D'UN MESSAGE
     // =====================================================
 
+    // Gère l'envoi d'un message lorsque le formulaire est soumis
     messageForm.addEventListener("submit", async event => {
 
         event.preventDefault();
@@ -397,6 +410,7 @@
 
         const receiverId = activeId;
 
+        // Enregistre le nouveau message dans la base de données Supabase
         const { data, error } = await supabase
             .from("messages")
             .insert({ receiver_id: receiverId, content })
@@ -429,7 +443,7 @@
     // TEMPS RÉEL
     // =====================================================
 
-    // Message reçu (l'événement vient de js/app.js)
+    // Traite les messages reçus en temps réel (événement envoyé par js/app.js)
     window.addEventListener("connect:message", event => {
 
         const message = event.detail;
@@ -438,6 +452,7 @@
         const conversation = conversations.get(senderId) || { unread: 0 };
         conversation.last = message;
 
+        // Si la conversation est ouverte et l'onglet visible, affiche et marque le message comme lu
         if (senderId === activeId && !document.hidden) {
             appendMessage(message);
             conversation.unread = 1;
@@ -454,18 +469,20 @@
     });
 
 
-    // Quand on revient sur l'onglet, on marque la conversation ouverte comme lue
+    // Quand l'utilisateur revient sur l'onglet, marque la conversation ouverte comme lue
     document.addEventListener("visibilitychange", () => {
         if (!document.hidden && activeId) markAsRead(activeId);
     });
 
 
+    // Actualise la liste et le statut du contact lorsqu'un changement de présence est détecté
     onPresenceChange(() => {
         renderList();
         updateChatStatus();
     });
 
 
+    // Le bouton « Nouveau message » vide la recherche et place le curseur dans le champ
     document.getElementById("newConversationButton")
         .addEventListener("click", () => {
             searchInput.value = "";
@@ -478,8 +495,10 @@
     // DÉMARRAGE
     // =====================================================
 
+    // Affiche la liste des conversations au chargement de la page
     renderList();
 
+    // Vérifie si un contact a été indiqué dans l'adresse URL
     const contactFromURL = new URLSearchParams(location.search).get("contact");
 
     if (contactFromURL && profiles.has(contactFromURL)) {
