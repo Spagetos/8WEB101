@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Connect — Map</title>
 
-    <!-- Leaflet : librairie de carte (gratuite, utilise OpenStreetMap) -->
+    <!-- Importation de Leaflet pour afficher la carte avec OpenStreetMap -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 
@@ -34,11 +34,14 @@
 
         </header>
 
-
+        
+        <!-- Organisation de la carte et de la liste des contacts -->
         <section class="map-layout">
 
             <div class="map-container">
 
+                
+                <!-- Zone dans laquelle Leaflet affiche la carte -->
                 <div id="map"></div>
 
                 <div class="map-controls">
@@ -46,6 +49,8 @@
                     <button id="zoomOut" title="Dézoomer">−</button>
                 </div>
 
+                
+                <!-- Message affiché selon les paramètres de partage de position -->
                 <div class="map-notice" id="mapNotice" hidden></div>
 
                 <div class="map-legend">
@@ -88,16 +93,20 @@
 
 <script type="module">
 
+    
+    // Importation des fonctions communes utilisées pour les profils, les positions et les statuts
     import {
         initApp, getProfiles, avatarHTML, fullName, initials, colorClass, esc,
         isOnline, onPresenceChange, distanceKm, formatDistance, timeAgo, showToast
     } from "./js/app.js";
 
-
+    
+    // Initialise l'application et récupère les informations de l'utilisateur connecté
     const { supabase, user, profile: me } = await initApp();
 
     const L = window.L;
 
+    // Récupération des éléments HTML utilisés dans le script
     const listEl = document.getElementById("mapContactList");
     const searchInput = document.getElementById("mapSearch");
     const notice = document.getElementById("mapNotice");
@@ -119,6 +128,7 @@
     const map = L.map("map", { zoomControl: false })
         .setView(myPosition || DEFAULT_CENTER, myPosition ? 13 : 11);
 
+    // Ajoute les tuiles OpenStreetMap qui constituent le fond de la carte
     L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
         maxZoom: 19,
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
@@ -127,12 +137,14 @@
     document.getElementById("zoomIn").onclick = () => map.zoomIn();
     document.getElementById("zoomOut").onclick = () => map.zoomOut();
 
-
+    
+    // Vérifie qu'un profil possède des coordonnées géographiques valides
     function hasLocation(p) {
         return p && p.latitude != null && p.longitude != null;
     }
 
-
+    
+    // Crée l'apparence du marqueur selon l'utilisateur et son statut en ligne
     function pinIcon(p, isMe) {
 
         const online = !isMe && isOnline(p.id);
@@ -152,7 +164,8 @@
 
     }
 
-
+    
+    // Génère le contenu de la fenêtre qui apparaît lorsqu'on clique sur un marqueur
     function popupHTML(p) {
 
         const isMe = p.id === user.id;
@@ -177,7 +190,7 @@
     }
 
 
-    // Crée, déplace ou supprime le marqueur d'une personne
+    // Crée, déplace ou supprime le marqueur d'une personne selon sa position
     function upsertMarker(p) {
 
         const isMe = p.id === user.id;
@@ -226,10 +239,13 @@
     // LISTE À DROITE
     // =====================================================
 
+    
+    // Affiche les contacts qui partagent leur position et permet de les rechercher
     function renderList() {
 
         const search = searchInput.value.toLowerCase().trim();
 
+        // Garde uniquement les contacts ayant une position enregistrée
         const located = [...profiles.values()]
             .filter(p => p.id !== user.id && hasLocation(p));
 
@@ -288,7 +304,8 @@
 
     }
 
-
+    
+    // Détecte le clic sur un contact dans la liste et le sélectionne sur la carte
     listEl.addEventListener("click", event => {
 
         const button = event.target.closest(".map-contact");
@@ -299,12 +316,14 @@
 
     searchInput.addEventListener("input", renderList);
 
-
+    
+    // Sélectionne un contact, met à jour son marqueur et centre la carte sur lui
     function select(id, { fly = true } = {}) {
 
         const previous = selectedId;
         selectedId = id;
 
+        // Actualise l'apparence de l'ancien et du nouveau contact sélectionné
         [previous, id].forEach(personId => {
             const p = profiles.get(personId);
             if (p && markers.has(personId)) {
@@ -328,6 +347,8 @@
     // GÉOLOCALISATION DE L'UTILISATEUR
     // =====================================================
 
+
+    // Affiche un avertissement si le partage de position est désactivé
     function updateNotice() {
 
         if (!me.share_location) {
@@ -341,7 +362,8 @@
 
     }
 
-
+    
+    // Récupère la position actuelle de l'utilisateur à l'aide du navigateur
     function locate({ fly = true } = {}) {
 
         if (!navigator.geolocation) {
@@ -417,6 +439,7 @@
     // TEMPS RÉEL : les positions bougent sans recharger
     // =====================================================
 
+    // Écoute les modifications de la table des profils dans Supabase
     supabase
         .channel("map-profiles")
         .on(
@@ -436,7 +459,7 @@
         )
         .subscribe();
 
-
+    // Actualise les marqueurs et la liste lorsque le statut en ligne d'un membre change
     onPresenceChange(() => {
         refreshAllMarkers();
         renderList();
@@ -447,10 +470,12 @@
     // DÉMARRAGE
     // =====================================================
 
+    // Prépare l'affichage de la carte et charge les marqueurs des contacts
     updateNotice();
     refreshAllMarkers();
     renderList();
 
+    // Si un contact est indiqué dans l'URL, le sélectionne automatiquement
     if (selectedId && markers.has(selectedId)) {
 
         select(selectedId);
@@ -467,7 +492,7 @@
 
     }
 
-    // Position automatique à l'ouverture (le navigateur demande l'autorisation)
+    // Tente de récupérer automatiquement la position de l'utilisateur à l'ouverture de la page
     locate({ fly: !myPosition && !selectedId });
 
 </script>
