@@ -9,6 +9,7 @@
 
 <body>
 
+<!-- Conteneur principal de la page de connexion et d'inscription -->
 <main class="auth-page">
 
     <div class="auth-card">
@@ -18,7 +19,7 @@
             <span>Connect</span>
         </div>
 
-        <h1 id="authTitle">Bon retour 👋</h1>
+        <h1 id="authTitle">Bon retour</h1>
         <p class="auth-subtitle" id="authSubtitle">
             Connectez-vous pour retrouver vos conversations.
         </p>
@@ -29,7 +30,8 @@
             <button type="button" class="auth-tab" data-mode="signup">Inscription</button>
         </div>
 
-
+        
+        <!-- Formulaire utilisé pour la connexion et l'inscription -->
         <form id="authForm" class="auth-form" novalidate>
 
             <div class="auth-row signup-only" hidden>
@@ -78,14 +80,15 @@
     import { supabase } from "./js/supabase.js";
 
 
-    // Déjà connecté ? → accueil
+    // Vérifie si une session existe déjà et redirige l'utilisateur vers l'accueil
     const { data: { session } } = await supabase.auth.getSession();
 
     if (session) location.replace("index.html");
 
     document.body.classList.add("ready");
 
-
+    
+    // Récupération des éléments du formulaire utilisés par le JavaScript
     const form = document.getElementById("authForm");
     const tabs = document.querySelectorAll(".auth-tab");
     const signupFields = document.querySelectorAll(".signup-only");
@@ -102,7 +105,8 @@
         message.hidden = false;
     }
 
-
+    
+    // Change l'affichage du formulaire selon le mode choisi (connexion ou inscription)
     function setMode(newMode) {
 
         mode = newMode;
@@ -116,7 +120,7 @@
         const isSignup = mode === "signup";
 
         document.getElementById("authTitle").textContent =
-            isSignup ? "Créer un compte" : "Bon retour 👋";
+            isSignup ? "Créer un compte" : "Bon retour";
 
         document.getElementById("authSubtitle").textContent =
             isSignup
@@ -131,7 +135,8 @@
 
     }
 
-
+    
+    // Associe chaque onglet au changement de mode du formulaire
     tabs.forEach(tab =>
         tab.addEventListener("click", () => setMode(tab.dataset.mode))
     );
@@ -152,7 +157,8 @@
 
     }
 
-
+    
+    // Gère l'envoi du formulaire lors d'une connexion ou d'une inscription
     form.addEventListener("submit", async event => {
 
         event.preventDefault();
@@ -169,6 +175,8 @@
         message.hidden = true;
 
         try {
+   
+            // ---------- Connexion à un compte existant ----------
 
             if (mode === "login") {
 
@@ -182,7 +190,10 @@
                 location.replace("index.html");
 
             } else {
+ 
+                // ---------- Création d'un nouveau compte ----------
 
+                // Récupère le prénom et le nom saisis dans le formulaire
                 const firstName = document.getElementById("firstName").value.trim();
                 const lastName = document.getElementById("lastName").value.trim();
 
@@ -191,6 +202,7 @@
                     return;
                 }
 
+                // Enregistre le nouvel utilisateur dans Supabase avec ses informations de profil
                 const { data, error } = await supabase.auth.signUp({
                     email,
                     password: pass,
