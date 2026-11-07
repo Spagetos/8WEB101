@@ -62,12 +62,13 @@
 
 <script type="module">
 
+    // Importation des fonctions nécessaires depuis le fichier principal de l'application
     import {
         initApp, getProfiles, avatarHTML, fullName, esc,
         isOnline, onPresenceChange, timeAgo, showToast
     } from "./js/app.js";
 
-
+    // Initialisation de l'application et récupération de l'utilisateur connecté
     const { user } = await initApp();
 
     const grid = document.getElementById("contactsGrid");
@@ -81,7 +82,7 @@
 
     let activeFilter = "all";
 
-
+    // Affiche les contacts selon la recherche et le filtre sélectionné
     function render() {
 
         const search = searchInput.value.toLowerCase().trim();
@@ -122,6 +123,7 @@
             return;
         }
 
+        // Création d'une carte HTML pour chaque contact visible
         grid.innerHTML = visible.map(p => {
 
             const online = isOnline(p.id);
@@ -175,9 +177,10 @@
 
     }
 
-
+    // Actualise les résultats à chaque modification de la recherche
     searchInput.addEventListener("input", render);
 
+    // Gestion des filtres : tous, en ligne ou hors ligne
     filterButtons.forEach(button => {
 
         button.addEventListener("click", () => {
@@ -193,6 +196,7 @@
     });
 
 
+    // Copie le lien d'inscription pour permettre d'inviter une nouvelle personne
     document.getElementById("inviteButton")
         .addEventListener("click", async () => {
 
