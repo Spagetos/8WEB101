@@ -2,10 +2,12 @@
 // Client Supabase partagé par toutes les pages
 // =========================================================
 
+// Importe la fonction qui permet de créer une connexion à Supabase.
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from "./config.js";
 
 
+// Vérifie que les informations nécessaires à la connexion sont bien configurées.
 const isConfigured =
     SUPABASE_URL.startsWith("https://") &&
     !SUPABASE_URL.includes("VOTRE_PROJET") &&
@@ -13,6 +15,7 @@ const isConfigured =
     !SUPABASE_ANON_KEY.includes("VOTRE_CLE");
 
 
+// Affiche un message d'erreur si les informations de connexion sont manquantes.
 if (!isConfigured) {
 
     document.body.innerHTML = `
@@ -33,4 +36,5 @@ if (!isConfigured) {
 }
 
 
+// Crée et exporte le client Supabase utilisé dans les autres fichiers JavaScript.
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
