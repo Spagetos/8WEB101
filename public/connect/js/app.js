@@ -18,7 +18,7 @@ export { supabase };
 
 export const COLORS = ["blue", "purple", "green", "pink", "orange"];
 
-
+// Protège le texte pour éviter l'insertion de code HTML non désiré.
 export function esc(text) {
 
     return String(text ?? "")
@@ -30,7 +30,7 @@ export function esc(text) {
 
 }
 
-
+// Retourne le nom complet de l'utilisateur ou son adresse e-mail.
 export function fullName(profile) {
 
     const name =
@@ -40,7 +40,7 @@ export function fullName(profile) {
 
 }
 
-
+// Récupère les initiales de l'utilisateur pour son avatar.
 export function initials(profile) {
 
     const first = (profile?.first_name || "").trim();
@@ -52,7 +52,7 @@ export function initials(profile) {
 
 }
 
-
+// Détermine la couleur de l'avatar à partir du profil.
 export function colorClass(profile) {
 
     if (COLORS.includes(profile?.color)) {
@@ -69,7 +69,7 @@ export function colorClass(profile) {
 
 }
 
-
+// Génère le code HTML de l'avatar avec ses initiales et son statut en ligne.
 export function avatarHTML(profile, { extraClass = "", online = false } = {}) {
 
     return `
@@ -86,7 +86,7 @@ function sameDay(a, b) {
     return a.toDateString() === b.toDateString();
 }
 
-
+// Formate une date pour afficher l'heure, le jour ou le mois selon son ancienneté.
 export function formatTime(iso) {
 
     const date = new Date(iso);
@@ -115,7 +115,7 @@ export function formatTime(iso) {
 
 }
 
-
+// Retourne une étiquette pour séparer les messages selon leur date.
 export function dayLabel(iso) {
 
     const date = new Date(iso);
@@ -136,7 +136,7 @@ export function dayLabel(iso) {
 
 }
 
-
+// Calcule le temps écoulé depuis une date.
 export function timeAgo(iso) {
 
     const seconds = Math.round((Date.now() - new Date(iso)) / 1000);
@@ -181,7 +181,7 @@ export function formatDistance(km) {
 
 }
 
-
+// Affiche un petit message temporaire à l'écran.
 export function showToast(message, type = "info") {
 
     let container = document.querySelector(".toast-container");
@@ -204,10 +204,11 @@ export function showToast(message, type = "info") {
 }
 
 
-// =========================================================
+// ========================
 // PROFILS
-// =========================================================
+// ========================
 
+// Garde les profils déjà chargés pour éviter de refaire la même requête.
 let profilesCache = null;
 
 
@@ -275,6 +276,7 @@ export async function loadConversations(userId) {
 // BARRE LATÉRALE
 // =========================================================
 
+// Liens affichés dans le menu de navigation.
 const NAV_ITEMS = [
     { id: "map", href: "map.html", icon: "⌖", label: "Map" },
     { id: "messages", href: "messages.html", icon: "▱", label: "Messages", badge: true },
@@ -282,7 +284,7 @@ const NAV_ITEMS = [
     { id: "settings", href: "settings.html", icon: "⚙", label: "Settings" }
 ];
 
-
+// Construit la barre latérale avec les liens et les informations du profil.
 function renderSidebar(profile) {
 
     const sidebar = document.getElementById("sidebar");
@@ -351,7 +353,7 @@ export function updateSidebarProfile(profile) {
 
 let currentUserId = null;
 
-
+// Met à jour le nombre de messages non lus dans le menu.
 export async function refreshUnreadBadge() {
 
     if (!currentUserId) return 0;
@@ -380,12 +382,14 @@ export async function refreshUnreadBadge() {
 // NOTIFICATIONS DU NAVIGATEUR
 // =========================================================
 
+// Clés utilisées pour enregistrer les préférences de notifications.
 export const NOTIF_KEYS = {
     push: "connect.notifications.push",
     messages: "connect.notifications.messages"
 };
 
 
+// Lit une préférence de notification enregistrée dans le navigateur.
 export function getNotifSetting(key, defaultValue = true) {
 
     try {
@@ -403,12 +407,12 @@ export function setNotifSetting(key, value) {
     try {
         localStorage.setItem(key, String(value));
     } catch {
-        // stockage indisponible (navigation privée…) : on ignore
+        // Si le stockage est indisponible, on ignore simplement l'erreur.
     }
 
 }
 
-
+// Affiche une notification du navigateur lorsqu'un nouveau message arrive.
 async function notifyNewMessage(message) {
 
     if (!("Notification" in window)) return;
@@ -468,6 +472,7 @@ function listenToIncomingMessages(userId) {
 // PRÉSENCE (qui est en ligne ?)
 // =========================================================
 
+// Contient les identifiants des utilisateurs actuellement en ligne.
 const onlineIds = new Set();
 const presenceListeners = new Set();
 let presenceChannel = null;
@@ -490,6 +495,7 @@ export function onPresenceChange(callback) {
 }
 
 
+// Active ou désactive le partage du statut en ligne de l'utilisateur.
 export async function setShowOnline(visible) {
 
     shouldTrack = visible;
@@ -504,7 +510,7 @@ export async function setShowOnline(visible) {
 
 }
 
-
+// Démarre le suivi de présence avec Supabase Realtime.
 function startPresence(profile) {
 
     shouldTrack = profile.show_online;
@@ -543,6 +549,7 @@ function startPresence(profile) {
 // INITIALISATION D'UNE PAGE CONNECTÉE
 // =========================================================
 
+// Vérifie la connexion, charge le profil et démarre les fonctionnalités communes.
 export async function initApp() {
 
     const { data: { session } } = await supabase.auth.getSession();
@@ -588,6 +595,7 @@ export async function initApp() {
         return new Promise(() => {});
     }
 
+    // Lance les fonctionnalités communes à toutes les pages connectées.
     renderSidebar(profile);
     startPresence(profile);
     listenToIncomingMessages(user.id);
@@ -599,6 +607,7 @@ export async function initApp() {
         .eq("id", user.id)
         .then();
 
+    // Redirige automatiquement vers la connexion lorsque l'utilisateur se déconnecte.
     supabase.auth.onAuthStateChange(event => {
         if (event === "SIGNED_OUT") location.replace("login.html");
     });
