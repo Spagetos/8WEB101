@@ -9,13 +9,15 @@
 
 <body>
 
+<!-- Conteneur principal de l’application -->
 <div class="app">
 
     <aside class="sidebar" id="sidebar" data-active="home"></aside>
 
 
     <main class="main-content">
-
+        
+        <!-- En-tête de la page avec le nom de l’utilisateur et son profil -->
         <header class="topbar">
 
             <div>
@@ -29,10 +31,10 @@
 
         </header>
 
-
+        <!-- Tableau de bord : statistiques, activités et raccourcis -->
         <section class="dashboard">
 
-            <!-- STATS -->
+            <!-- STATISTIQUES -->
             <div class="stats-grid">
 
                 <div class="stat-card">
@@ -76,7 +78,7 @@
 
             <div class="dashboard-grid">
 
-                <!-- RECENT MESSAGES -->
+                <!-- MESSAGES RÉCENTS -->
                 <section class="panel">
 
                     <div class="panel-header">
@@ -94,7 +96,7 @@
                 </section>
 
 
-                <!-- NEW MEMBERS -->
+                <!-- NOUVEAU MEMBERS -->
                 <section class="panel">
 
                     <div class="panel-header">
@@ -113,7 +115,7 @@
             </div>
 
 
-            <!-- QUICK ACTIONS -->
+            <!-- ACTIONS PRINCIPALES -->
             <section class="quick-actions-section">
 
                 <div class="section-heading">
@@ -163,6 +165,7 @@
 
 <script type="module">
 
+    // Importation des fonctions partagées utilisées sur les différentes pages du site
     import {
         initApp, getProfiles, loadConversations, avatarHTML, fullName,
         esc, formatTime, timeAgo, isOnline, onPresenceChange
@@ -209,7 +212,8 @@
     const unreadConversations = [...conversations.values()]
         .filter(conversation => conversation.unread > 0).length;
 
-
+    
+    // Met à jour les statistiques affichées dans les cartes du tableau de bord
     document.getElementById("statMessages").textContent = receivedCount ?? 0;
     document.getElementById("statMessagesSub").textContent = `${weekCount ?? 0} cette semaine`;
 
@@ -224,6 +228,7 @@
 
     // ---------- Messages récents ----------
 
+    // Construit la liste des cinq conversations les plus récentes
     function renderRecent() {
 
         const list = document.getElementById("recentMessages");
@@ -239,6 +244,8 @@
             return;
         }
 
+        
+        // Génère un aperçu HTML pour chaque conversation
         list.innerHTML = recent.map(([otherId, conversation]) => {
 
             const other = profiles.get(otherId);
@@ -269,6 +276,8 @@
 
     // ---------- Nouveaux membres ----------
 
+
+    // Affiche les quatre membres inscrits le plus récemment
     function renderMembers() {
 
         const list = document.getElementById("newMembers");
@@ -298,7 +307,8 @@
 
     }
 
-
+    
+    // Met à jour le nombre de contacts actuellement en ligne
     function renderOnline() {
         const count = others.filter(p => isOnline(p.id)).length;
         document.getElementById("statOnline").textContent = count;
