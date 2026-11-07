@@ -27,6 +27,7 @@
         <section class="settings-page">
 
             <!-- PROFILE -->
+            <!-- Formulaire permettant de modifier les informations du profil -->
             <form class="settings-card" id="profileForm">
 
                 <div class="settings-card-header">
@@ -39,6 +40,7 @@
 
                 <div class="profile-settings">
 
+                    <!-- Aperçu de l'avatar et des informations du profil -->
                     <div id="profileAvatar"></div>
 
                     <div class="profile-info">
@@ -52,7 +54,8 @@
 
                 </div>
 
-
+                
+                <!-- Champs permettant de modifier les informations personnelles -->
                 <div class="settings-form">
 
                     <div class="form-group">
@@ -88,6 +91,7 @@
 
 
             <!-- NOTIFICATIONS -->
+            <!-- Paramètres permettant de gérer les notifications -->            
             <div class="settings-card">
 
                 <div class="settings-card-header">
@@ -115,6 +119,8 @@
                             <strong>Nouveaux messages</strong>
                             <span>Être averti lorsqu'un contact vous écrit.</span>
                         </div>
+                        
+                        <!-- Interrupteur pour activer les notifications du navigateur -->
                         <label class="switch">
                             <input type="checkbox" id="notifMessages">
                             <span class="slider"></span>
@@ -126,7 +132,8 @@
             </div>
 
 
-            <!-- PRIVACY -->
+            <!-- CONFIDENTIALITÉ -->
+            <!-- Paramètres contrôlant les informations visibles par les contacts -->
             <div class="settings-card">
 
                 <div class="settings-card-header">
@@ -154,6 +161,8 @@
                             <strong>Afficher mon statut en ligne</strong>
                             <span>Permettre aux contacts de voir quand vous êtes en ligne.</span>
                         </div>
+                        
+                        <!-- Interrupteur pour contrôler la visibilité du statut en ligne -->
                         <label class="switch">
                             <input type="checkbox" id="showOnline">
                             <span class="slider"></span>
@@ -165,7 +174,8 @@
             </div>
 
 
-            <!-- SECURITY -->
+            <!-- SÉCURITÉ -->
+            <!-- Options liées à la sécurité du compte -->       
             <div class="settings-card">
 
                 <div class="settings-card-header">
@@ -186,6 +196,7 @@
                         <span>→</span>
                     </button>
 
+                    <!-- Formulaire de modification du mot de passe -->
                     <form class="password-form" id="passwordForm" hidden>
 
                         <div class="form-group">
@@ -216,7 +227,8 @@
             </div>
 
 
-            <!-- DANGER -->
+            <!-- ZONE SENSIBLE -->
+            <!-- Action de déconnexion du compte -->
             <div class="settings-card danger-card">
 
                 <div class="settings-card-header">
@@ -239,6 +251,7 @@
 
 <script type="module">
 
+    // Importation des fonctions et constantes utilisées dans les paramètres
     import {
         initApp, avatarHTML, fullName, COLORS, showToast,
         updateSidebarProfile, setShowOnline,
@@ -258,10 +271,10 @@
     // PROFIL
     // =====================================================
 
-    // copie modifiable pour l'aperçu en direct
+    // Copie modifiable du profil pour afficher les changements avant leur enregistrement
     const draft = { ...profile };
 
-
+    // Actualise l'aperçu du profil lorsque l'utilisateur modifie ses informations
     function renderPreview() {
 
         draft.first_name = firstName.value.trim();
@@ -280,7 +293,8 @@
 
     }
 
-
+    
+    // Remplit les champs avec les informations actuelles du profil
     firstName.value = profile.first_name;
     lastName.value = profile.last_name;
     role.value = profile.role;
@@ -301,13 +315,15 @@
 
     });
 
+    // Actualise l'aperçu dès qu'un champ du profil est modifié
     [firstName, lastName, role].forEach(input =>
         input.addEventListener("input", renderPreview)
     );
 
     renderPreview();
 
-
+    
+    // Enregistre les modifications du profil dans Supabase
     document.getElementById("profileForm")
         .addEventListener("submit", async event => {
 
@@ -322,6 +338,7 @@
             const button = document.getElementById("saveProfile");
             button.disabled = true;
 
+            // Met à jour les informations du profil dans la base de données
             const { data, error } = await supabase
                 .from("profiles")
                 .update({
@@ -345,6 +362,7 @@
             Object.assign(profile, data);
             updateSidebarProfile(data);
 
+            // Affiche temporairement une confirmation sur le bouton
             const originalText = button.textContent;
             button.textContent = "Modifications enregistrées ✓";
             setTimeout(() => button.textContent = originalText, 2000);
@@ -352,15 +370,16 @@
         });
 
 
-    // =====================================================
-    // NOTIFICATIONS (préférences gardées dans le navigateur)
-    // =====================================================
+    // ===============
+    // NOTIFICATIONS
+    // ===============
 
     const notifPush = document.getElementById("notifPush");
     const notifMessages = document.getElementById("notifMessages");
 
     const notificationsSupported = "Notification" in window;
 
+    // Charge les préférences de notifications déjà enregistrées
     notifPush.checked =
         notificationsSupported &&
         Notification.permission === "granted" &&
@@ -368,7 +387,8 @@
 
     notifMessages.checked = getNotifSetting(NOTIF_KEYS.messages, true);
 
-
+    
+    // Gère l'activation ou la désactivation des notifications du navigateur
     notifPush.addEventListener("change", async () => {
 
         if (!notifPush.checked) {
@@ -382,6 +402,7 @@
             return;
         }
 
+        // Demande l'autorisation d'envoyer des notifications
         const permission = await Notification.requestPermission();
 
         if (permission !== "granted") {
@@ -396,6 +417,7 @@
     });
 
 
+    // Enregistre la préférence concernant les notifications de nouveaux messages
     notifMessages.addEventListener("change", () =>
         setNotifSetting(NOTIF_KEYS.messages, notifMessages.checked)
     );
@@ -408,6 +430,7 @@
     const shareLocation = document.getElementById("shareLocation");
     const showOnline = document.getElementById("showOnline");
 
+    // Affiche les réglages de confidentialité actuellement enregistrés
     shareLocation.checked = profile.share_location;
     showOnline.checked = profile.show_online;
 
@@ -436,6 +459,7 @@
     }
 
 
+    // Gère l'activation ou la désactivation du partage de position
     shareLocation.addEventListener("change", async () => {
 
         if (await savePrivacy("share_location", shareLocation)) {
@@ -459,19 +483,20 @@
     });
 
 
-    // =====================================================
+    // ==============
     // SÉCURITÉ
-    // =====================================================
+    // ==============
 
     const passwordForm = document.getElementById("passwordForm");
 
+    // Affiche ou masque le formulaire de changement de mot de passe
     document.getElementById("togglePassword")
         .addEventListener("click", () => {
             passwordForm.hidden = !passwordForm.hidden;
             if (!passwordForm.hidden) document.getElementById("newPassword").focus();
         });
 
-
+    // Gère la modification du mot de passe du compte
     passwordForm.addEventListener("submit", async event => {
 
         event.preventDefault();
@@ -489,6 +514,7 @@
             return;
         }
 
+        // Demande à Supabase de mettre à jour le mot de passe
         const { error } = await supabase.auth.updateUser({ password: newPassword });
 
         if (error) {
@@ -503,7 +529,7 @@
 
     });
 
-
+    // Déconnecte les autres appareils après confirmation de l'utilisateur
     document.getElementById("signOutOthers")
         .addEventListener("click", async () => {
 
@@ -518,7 +544,7 @@
 
         });
 
-
+    // Déconnecte l'utilisateur et le redirige vers la page de connexion
     document.getElementById("logoutButton")
         .addEventListener("click", async () => {
 
