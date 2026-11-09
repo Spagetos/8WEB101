@@ -4,7 +4,7 @@
 
 Connect permet à des utilisateurs de créer un compte, de voir qui est en ligne, d'échanger des messages privés **en temps réel** et de retrouver leurs contacts sur une **carte interactive**, tout en gardant le contrôle sur ce qu'ils partagent (position, statut en ligne).
 
-🔗 **Site publié :** 
+🔗 **Site publié :** https://spagetos.github.io/8WEB101/public/connect
 
 ---
 
