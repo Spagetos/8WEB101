@@ -4,8 +4,7 @@
 
 Connect permet à des utilisateurs de créer un compte, de voir qui est en ligne, d'échanger des messages privés **en temps réel** et de retrouver leurs contacts sur une **carte interactive**, tout en gardant le contrôle sur ce qu'ils partagent (position, statut en ligne).
 
-🔗 **Site publié :** _à compléter_
-🎥 **Vidéo de présentation :** _à compléter_
+🔗 **Site publié :** 
 
 ---
 
@@ -26,10 +25,10 @@ Connect permet à des utilisateurs de créer un compte, de voir qui est en ligne
 
 ## Équipe
 
-| Membre | Rôle / responsabilités |
-|--------|------------------------|
-| **Olivier BOUHOURS** | _à compléter_ |
-| **Matteo GIUFFRE** | _à compléter_ |
+| Membre |
+|--------|
+| **Olivier BOUHOURS** |
+| **Matteo GIUFFRE** |
 
 ---
 
