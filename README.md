@@ -1,4 +1,6 @@
 # 8WEB101
+
+#LE BON README EST DANS /public/connect/README.md
 Messagerie multifonciton
 
 <div align="center">
